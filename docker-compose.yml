@@ -1,0 +1,47 @@
+services:
+  influxdb:
+    image: influxdb:1.8
+    container_name: influxdb
+    ports:
+      - "8086:8086"
+    environment:
+      - INFLUXDB_DB=k6
+    networks:
+      - k6_network
+    volumes:
+      - influxdb-data:/var/lib/influxdb
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    networks:
+      - k6_network
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/provisioning/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      - influxdb
+
+  k6:
+    image: grafana/k6
+    container_name: k6
+    volumes:
+      - .:/scripts
+    working_dir: /scripts
+    command: run --out influxdb=http://influxdb:8086/k6 test.js
+    networks:
+      - k6_network
+
+volumes:
+  influxdb-data:
+  grafana-data:
+
+networks:
+  k6_network:
+    driver: bridge
